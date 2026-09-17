@@ -223,7 +223,15 @@ export default function AdminPanel({ banks, updateBank, sessionToken, onAuthenti
   const applyAaslSelection = (code) => {
     const opt = aaslOptions.find((o) => o.code === code);
     if (!opt) return;
-    patch('standards', { aaslCode: opt.code, aaslFoundation: opt.foundation, aaslDomain: opt.domain, aaslText: opt.text });
+    patch('standards', {
+      aaslCode: opt.code, aaslFoundation: opt.foundation, aaslDomain: opt.domain,
+      aaslText: opt.text, aaslIcanStatement: opt.ican
+    });
+  };
+
+  const resetAaslIcan = () => {
+    const opt = aaslOptions.find((o) => o.code === banks.standards.aaslCode);
+    if (opt) patch('standards', { aaslIcanStatement: opt.ican });
   };
 
   const resetIcan = () => {
@@ -310,7 +318,18 @@ export default function AdminPanel({ banks, updateBank, sessionToken, onAuthenti
           </div>
           <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--ice-2)' }}>
             <label className="field-label">
-              "I Can" Statement (shown to students) <span className="code">{banks.standards.ncesCode}</span>
+              "I Can" — AASL Library Skill (shown to students) <span className="code">{banks.standards.aaslCode}</span>
+            </label>
+            <textarea
+              rows={2}
+              value={banks.standards.aaslIcanStatement}
+              onChange={(e) => patch('standards', { aaslIcanStatement: e.target.value })}
+            />
+            <button type="button" className="small-btn" onClick={resetAaslIcan}>Reset to suggested wording</button>
+          </div>
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--ice-2)' }}>
+            <label className="field-label">
+              "I Can" — Content Standard (shown to students) <span className="code">{banks.standards.ncesCode}</span>
             </label>
             <textarea
               rows={2}

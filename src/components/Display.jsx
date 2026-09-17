@@ -74,8 +74,12 @@ export default function StudentDisplay({ banks }) {
 
   // ---- Lesson slides: Fit / Full Screen ----
   const [slidesFullscreen, setSlidesFullscreen] = useState(false);
+  // ---- Video: Fit / Full Screen ----
+  const [videoFullscreen, setVideoFullscreen] = useState(false);
   useEffect(() => {
-    function onKey(e) { if (e.key === 'Escape') setSlidesFullscreen(false); }
+    function onKey(e) {
+      if (e.key === 'Escape') { setSlidesFullscreen(false); setVideoFullscreen(false); }
+    }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
@@ -159,7 +163,8 @@ export default function StudentDisplay({ banks }) {
       <div className="grid">
         <div className="card c6 ican-card">
           <h3><span className="card-emoji">🎯</span>Today I Can...</h3>
-          <p>{standards?.icanStatement}</p>
+          <p style={{ marginBottom: 6 }}>📚 {standards?.aaslIcanStatement}</p>
+          <p>📖 {standards?.icanStatement}</p>
         </div>
 
         <div className="card c6 word-card">
@@ -215,10 +220,33 @@ export default function StudentDisplay({ banks }) {
         </div>
 
         <div className="card c6">
-          <h3><span className="card-emoji">▶️</span>Watch</h3>
-          <div className="video-embed">
+          <div className="slides-toolbar">
+            <h3 style={{ margin: 0 }}><span className="card-emoji">▶️</span>Watch</h3>
+            <div>
+              <button
+                type="button"
+                className={`slides-btn${!videoFullscreen ? ' active' : ''}`}
+                onClick={() => setVideoFullscreen(false)}
+              >
+                Fit to Display
+              </button>
+              <button
+                type="button"
+                className={`slides-btn${videoFullscreen ? ' active' : ''}`}
+                onClick={() => setVideoFullscreen(true)}
+              >
+                Full Screen
+              </button>
+            </div>
+          </div>
+          <div className={`video-embed${videoFullscreen ? ' fullscreen-mode' : ''}`}>
             <iframe src={toEmbedUrl(video?.url)} title="Lesson video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
           </div>
+          {videoFullscreen && (
+            <button type="button" className="slides-exit-btn" onClick={() => setVideoFullscreen(false)}>
+              ✕ Exit Full Screen
+            </button>
+          )}
         </div>
       </div>
 
