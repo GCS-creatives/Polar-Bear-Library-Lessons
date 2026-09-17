@@ -164,6 +164,67 @@ function LessonsToolbar({ banks, updateBank }) {
     loadLesson(items[nextIndex].id);
   };
 
+  const downloadJson = (data, filename) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportCurrent = () => {
+    const name = activeLesson?.name || banks.lessonTitle?.internalTitle || 'Untitled lesson';
+    const safeName = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'lesson';
+    downloadJson({ name, savedAt: new Date().toISOString(), snapshot: current }, `${safeName}.json`);
+  };
+
+  const exportAll = () => {
+    downloadJson({ items }, 'polar-bear-library-lessons.json');
+  };
+
+  const fileInputRef = React.useRef(null);
+
+  const handleImportFile = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-selecting the same file later
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed;
+      try {
+        parsed = JSON.parse(reader.result);
+      } catch {
+        window.alert('That file isn\u2019t valid JSON — nothing was imported.');
+        return;
+      }
+      // Accept: a single lesson { name, snapshot }, an array of lessons,
+      // or the { items: [...] } shape from "Export All".
+      const incoming = Array.isArray(parsed) ? parsed
+        : Array.isArray(parsed.items) ? parsed.items
+        : parsed.snapshot ? [parsed]
+        : null;
+      if (!incoming || incoming.length === 0) {
+        window.alert('That file doesn\u2019t look like a lesson export — nothing was imported.');
+        return;
+      }
+      if (!confirmDiscardIfDirty()) return;
+      const imported = incoming.map((l) => ({
+        id: `lesson-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: l.name || 'Imported lesson',
+        savedAt: l.savedAt || new Date().toISOString(),
+        snapshot: l.snapshot
+      }));
+      const nextItems = [...items, ...imported];
+      const first = imported[0];
+      applySnapshot(first.snapshot);
+      updateBank('lessons', { items: nextItems, activeId: first.id });
+      setBaseline(first.snapshot);
+      window.alert(`Imported ${imported.length} lesson${imported.length > 1 ? 's' : ''}. Now showing "${first.name}".`);
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div className="card c12" style={{ background: 'linear-gradient(120deg,var(--ocean-deep),var(--sky-deep))' }}>
       <h3 style={{ color: '#fff' }}><span className="card-emoji">📁</span>Lessons</h3>
@@ -190,6 +251,18 @@ function LessonsToolbar({ banks, updateBank }) {
         <button type="button" className="small-btn" style={{ borderColor: 'var(--coral)', color: '#fff', background: 'var(--coral)' }} onClick={newLesson}>
           + New Lesson
         </button>
+      </div>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 8 }}>
+        <button type="button" className="small-btn" onClick={exportCurrent}>⬇ Export This Lesson</button>
+        <button type="button" className="small-btn" onClick={exportAll} disabled={items.length === 0}>⬇ Export All</button>
+        <button type="button" className="small-btn" onClick={() => fileInputRef.current?.click()}>⬆ Import Lesson(s)</button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          style={{ display: 'none' }}
+          onChange={handleImportFile}
+        />
       </div>
       <p className="field-hint" style={{ color: dirty ? '#ffe0b2' : 'rgba(255,255,255,.75)' }}>
         {dirty ? 'Unsaved changes.' : 'All changes saved.'}
