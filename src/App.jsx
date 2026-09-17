@@ -27,6 +27,9 @@ export default function App() {
           const merged = (base && typeof base === 'object' && fetched && typeof fetched === 'object')
             ? { ...base, ...fetched }
             : (fetched ?? base);
+          if (base && Array.isArray(base.items) && !Array.isArray(merged?.items)) {
+            merged.items = base.items;
+          }
           loaded[name] = merged;
         } catch {
           loaded[name] = defaultContent[name];

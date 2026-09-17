@@ -4,6 +4,11 @@
 // crashes the first render.
 
 export const defaultContent = {
+  lessons: {
+    items: [], // [{ id, name, savedAt, snapshot: {...LESSON_BANK_NAMES} }]
+    activeId: null // null = an unsaved/new lesson currently being built
+  },
+
   lessonTitle: {
     internalTitle: 'How We Use Our Library — First Visit',
     studentHeadline: 'Today at the Library 📚'
@@ -80,6 +85,10 @@ export const defaultContent = {
     text: '0–2 min | Welcome + show 3-part visual schedule: STORY → ACTIVITY → EXPLORE | Orient to the routine\n2–3 min | Introduce 2 expectations: "Books stay safe," "Gentle hands." Model both. | Watch / model gesture\n3–9 min | Read Do Not Bring Your Dragon to the Library | Look, listen, react, locate dragons\n9–14 min | Read/interact with Boop! | Touch/point to noses, take a boop turn\n14–18 min | Sensory-book exploration | Explore one book at a time; MORE/FINISHED\n18–20 min | Review + goodbye routine | Choose favorite: dragon or dog?'
   }
 };
+
+// Every bank name EXCEPT `lessons` itself — this is what gets bundled into
+// a snapshot when saving a lesson, and what gets restored when loading one.
+export const LESSON_BANK_NAMES = Object.keys(defaultContent).filter((k) => k !== 'lessons');
 
 // AASL National School Library Standards — Shared Foundations paired with
 // their Domains, plus a plain-language description of the Foundation for

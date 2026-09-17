@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { checkPin, changePin } from '../lib/blobsClient.js';
-import { aaslOptions, ncesOptions } from '../data/defaults.js';
+import { defaultContent, aaslOptions, ncesOptions, LESSON_BANK_NAMES } from '../data/defaults.js';
 
 /* ---------- PIN login gate ---------- */
 function PinGate({ onAuthenticated }) {
@@ -89,6 +89,117 @@ function ChangePinCard({ sessionToken }) {
   );
 }
 
+/* ---------- Lessons: save / load / new / cycle ---------- */
+function getSnapshot(banks) {
+  const snap = {};
+  for (const name of LESSON_BANK_NAMES) snap[name] = banks[name];
+  return snap;
+}
+
+function LessonsToolbar({ banks, updateBank }) {
+  const [baseline, setBaseline] = useState(() => getSnapshot(banks));
+  const current = getSnapshot(banks);
+  const dirty = JSON.stringify(current) !== JSON.stringify(baseline);
+
+  const { items, activeId } = banks.lessons;
+  const activeIndex = items.findIndex((l) => l.id === activeId);
+  const activeLesson = activeIndex >= 0 ? items[activeIndex] : null;
+
+  const applySnapshot = (snapshot) => {
+    for (const name of LESSON_BANK_NAMES) {
+      updateBank(name, snapshot[name]);
+    }
+  };
+
+  const confirmDiscardIfDirty = () => {
+    if (!dirty) return true;
+    return window.confirm('You have unsaved changes on this lesson. Discard them and continue?');
+  };
+
+  const saveCurrent = () => {
+    if (!activeLesson) {
+      saveAsNew();
+      return;
+    }
+    const nextItems = items.map((l) =>
+      l.id === activeLesson.id ? { ...l, snapshot: current, savedAt: new Date().toISOString() } : l
+    );
+    updateBank('lessons', { items: nextItems, activeId: activeLesson.id });
+    setBaseline(current);
+  };
+
+  const saveAsNew = () => {
+    const name = window.prompt('Name this lesson:', banks.lessonTitle?.internalTitle || 'Untitled lesson');
+    if (!name) return;
+    const id = `lesson-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const newEntry = { id, name, savedAt: new Date().toISOString(), snapshot: current };
+    updateBank('lessons', { items: [...items, newEntry], activeId: id });
+    setBaseline(current);
+  };
+
+  const newLesson = () => {
+    if (!confirmDiscardIfDirty()) return;
+    const blank = {};
+    for (const name of LESSON_BANK_NAMES) blank[name] = defaultContent[name];
+    applySnapshot(blank);
+    updateBank('lessons', { items, activeId: null });
+    setBaseline(blank);
+  };
+
+  const loadLesson = (id) => {
+    if (!id) return;
+    if (!confirmDiscardIfDirty()) return;
+    const lesson = items.find((l) => l.id === id);
+    if (!lesson) return;
+    applySnapshot(lesson.snapshot);
+    updateBank('lessons', { items, activeId: id });
+    setBaseline(lesson.snapshot);
+  };
+
+  const cycle = (dir) => {
+    if (items.length === 0) return;
+    const nextIndex = activeIndex < 0
+      ? (dir > 0 ? 0 : items.length - 1)
+      : (activeIndex + dir + items.length) % items.length;
+    loadLesson(items[nextIndex].id);
+  };
+
+  return (
+    <div className="card c12" style={{ background: 'linear-gradient(120deg,var(--ocean-deep),var(--sky-deep))' }}>
+      <h3 style={{ color: '#fff' }}><span className="card-emoji">📁</span>Lessons</h3>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button type="button" className="small-btn" onClick={() => cycle(-1)} disabled={items.length === 0}>◀ Prev</button>
+        <select
+          style={{ maxWidth: 260, marginBottom: 0 }}
+          value={activeId || ''}
+          onChange={(e) => loadLesson(e.target.value)}
+        >
+          <option value="">— New / unsaved lesson —</option>
+          {items.map((l) => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+        </select>
+        <button type="button" className="small-btn" onClick={() => cycle(1)} disabled={items.length === 0}>Next ▶</button>
+
+        <span style={{ flex: 1 }} />
+
+        <button type="button" className="small-btn" onClick={saveCurrent}>
+          {activeLesson ? 'Save Changes' : 'Save'}
+        </button>
+        <button type="button" className="small-btn" onClick={saveAsNew}>Save As New</button>
+        <button type="button" className="small-btn" style={{ borderColor: 'var(--coral)', color: '#fff', background: 'var(--coral)' }} onClick={newLesson}>
+          + New Lesson
+        </button>
+      </div>
+      <p className="field-hint" style={{ color: dirty ? '#ffe0b2' : 'rgba(255,255,255,.75)' }}>
+        {dirty ? 'Unsaved changes.' : 'All changes saved.'}
+        {activeLesson && ` Editing "${activeLesson.name}" — last saved ${new Date(activeLesson.savedAt).toLocaleString()}.`}
+        {!activeLesson && ' This lesson has never been saved — use Save or Save As New to keep it.'}
+      </p>
+    </div>
+  );
+}
+
 /* ---------- Main Admin panel ---------- */
 export default function AdminPanel({ banks, updateBank, sessionToken, onAuthenticated, onExit }) {
   if (!sessionToken) {
@@ -135,6 +246,8 @@ export default function AdminPanel({ banks, updateBank, sessionToken, onAuthenti
       </div>
 
       <div className="grid">
+
+        <LessonsToolbar banks={banks} updateBank={updateBank} />
 
         {/* Titles */}
         <div className="card c12">
@@ -255,7 +368,7 @@ export default function AdminPanel({ banks, updateBank, sessionToken, onAuthenti
         </div>
 
         {/* Prompts + Video */}
-        <div className="grid" style={{ gap: 16 }}>
+        <div className="grid c12" style={{ gap: 16 }}>
           <div className="card c6">
             <h3><span className="card-emoji">💬</span>"Your Turn" Prompts (shown to students)</h3>
             <textarea rows={3} value={banks.prompts.text} onChange={(e) => updateBank('prompts', { text: e.target.value })} />
