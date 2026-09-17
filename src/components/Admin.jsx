@@ -220,9 +220,10 @@ export default function AdminPanel({ banks, updateBank, sessionToken, onAuthenti
     });
   };
 
-  const applyAaslSelection = (value) => {
-    const [foundation, domain] = value.split('|');
-    patch('standards', { aaslFoundation: foundation, aaslDomain: domain });
+  const applyAaslSelection = (code) => {
+    const opt = aaslOptions.find((o) => o.code === code);
+    if (!opt) return;
+    patch('standards', { aaslCode: opt.code, aaslFoundation: opt.foundation, aaslDomain: opt.domain, aaslText: opt.text });
   };
 
   const resetIcan = () => {
@@ -279,19 +280,19 @@ export default function AdminPanel({ banks, updateBank, sessionToken, onAuthenti
           <h3><span className="card-emoji">📐</span>Standards Addressed</h3>
           <div className="grid" style={{ gap: 16 }}>
             <div className="c6">
-              <label className="field-label">AASL Shared Foundation → Domain</label>
-              <select
-                value={`${banks.standards.aaslFoundation}|${banks.standards.aaslDomain}`}
-                onChange={(e) => applyAaslSelection(e.target.value)}
-              >
-                {aaslOptions.map((o) => (
-                  <option key={`${o.foundation}|${o.domain}`} value={`${o.foundation}|${o.domain}`}>
-                    {o.foundation} → {o.domain}
-                  </option>
+              <label className="field-label">AASL Learner Competency</label>
+              <select value={banks.standards.aaslCode} onChange={(e) => applyAaslSelection(e.target.value)}>
+                {['Inquire', 'Include', 'Collaborate', 'Curate', 'Explore', 'Engage'].map((foundation) => (
+                  <optgroup label={foundation} key={foundation}>
+                    {aaslOptions.filter((o) => o.foundation === foundation).map((o) => (
+                      <option key={o.code} value={o.code}>{o.code} — {o.domain}</option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
               <p className="std-desc">
-                {aaslOptions.find((o) => o.foundation === banks.standards.aaslFoundation)?.description}
+                <span className="code">{banks.standards.aaslCode}</span>
+                {banks.standards.aaslText}
               </p>
             </div>
             <div className="c6">
